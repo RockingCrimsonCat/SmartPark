@@ -90,6 +90,30 @@ public class SessionServiceTests
     }
 
     [Fact]
+    public async Task OfflineEntry_OfSubscriber_IsFreeOnExit()
+    {
+        _db.Subscriptions.Add(new Subscription
+        {
+            ParkingId = _parkingId, Plate = "KA0001EV", OwnerId = Guid.NewGuid(),
+            ValidFrom = DateTime.UtcNow.AddDays(-1), ValidTo = DateTime.UtcNow.AddDays(30)
+        });
+        await _db.SaveChangesAsync();
+        var events = new[]
+        {
+            new OfflineEvent(Guid.NewGuid(), "entry", "KA0001EV", "BAR-IN-1", DateTime.UtcNow.AddHours(-3)),
+            new OfflineEvent(Guid.NewGuid(), "exit", "KA0001EV", "BAR-OUT-1", DateTime.UtcNow.AddMinutes(-5))
+        };
+
+        var result = await _service.SyncOfflineAsync(new SyncBatchRequest(_parkingId, events));
+
+        var session = await _db.Sessions.SingleAsync();
+        Assert.Equal(2, result.Accepted);
+        Assert.Equal(EntryMode.Subscription, session.Mode);
+        Assert.Equal(SessionStatus.Closed, session.Status);
+        Assert.Equal(0m, session.Amount);
+    }
+
+    [Fact]
     public async Task FullParking_DeniesGuests()
     {
         await _service.ProcessEntryAsync(Request("AA0004AA"));

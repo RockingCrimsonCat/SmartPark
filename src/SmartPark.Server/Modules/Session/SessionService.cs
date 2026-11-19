@@ -220,6 +220,23 @@ public class SessionService
                         ParkingId = batch.ParkingId, Plate = plate, OwnerId = vehicle?.OwnerId,
                         EntryTime = time, EntryEventId = e.EventId, Mode = EntryMode.Offline
                     };
+                    // Абонемент чи бронювання враховуються й для в’їзду в автономному режимі.
+                    var booking = await _db.Bookings.FirstOrDefaultAsync(b => b.ParkingId == batch.ParkingId &&
+                        b.Plate == plate && b.Status == BookingStatus.Confirmed &&
+                        b.StartTime - BookingEarlyArrival <= time && b.EndTime > time, ct);
+                    var subscription = await _db.Subscriptions.AsNoTracking().FirstOrDefaultAsync(x =>
+                        x.ParkingId == batch.ParkingId && x.Plate == plate && x.ValidFrom <= time && x.ValidTo > time, ct);
+                    if (booking is not null)
+                    {
+                        booking.Status = BookingStatus.Activated;
+                        s.Mode = EntryMode.Booking;
+                        s.BookingId = booking.Id;
+                    }
+                    else if (subscription is not null)
+                    {
+                        s.Mode = EntryMode.Subscription;
+                        s.SubscriptionId = subscription.Id;
+                    }
                     _db.Sessions.Add(s);
                     _outbox.Add(new SessionStarted(s.Id, s.ParkingId, plate, s.OwnerId, s.Mode.ToString()));
                 }
