@@ -1,5 +1,6 @@
 # Запуск усієї системи: docker compose up --build
 # Веб-клієнт: http://localhost:8080   Swagger: http://localhost:5000/swagger
+# Порти відкриті лише для цього комп’ютера (127.0.0.1), з локальної мережі недоступні.
 services:
   db:
     image: postgres:16-alpine
@@ -8,7 +9,7 @@ services:
       POSTGRES_USER: smartpark
       POSTGRES_PASSWORD: smartpark
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -30,7 +31,7 @@ services:
       Client__BaseUrl: http://localhost:8080
       TZ: Europe/Kyiv
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     volumes:
       - appdata:/data
 
@@ -40,7 +41,7 @@ services:
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
 
   simulator:
     build:

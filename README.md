@@ -14,6 +14,8 @@ docker compose up -d --build
 - Swagger (REST API): http://localhost:5000/swagger
 - PostgreSQL: localhost:5432 (база/користувач/пароль `smartpark`)
 
+Порти прив’язані до `127.0.0.1`: система доступна лише з комп’ютера, на якому запущена, і не видна з локальної мережі.
+
 Симулятор паркінгу:
 
 ```bash
