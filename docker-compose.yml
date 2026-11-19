@@ -1,15 +1,17 @@
 # Запуск усієї системи: docker compose up --build
 # Веб-клієнт: http://localhost:8080   Swagger: http://localhost:5000/swagger
-# Порти відкриті лише для цього комп’ютера (127.0.0.1), з локальної мережі недоступні.
+# За замовчуванням порти відкриті лише для цього комп’ютера (BIND_ADDRESS=127.0.0.1).
+# Ключі та паролі задаються змінними оточення у файлі .env (зразок – .env.example);
+# значення за замовчуванням нижче призначені лише для локальної розробки.
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: smartpark
       POSTGRES_USER: smartpark
-      POSTGRES_PASSWORD: smartpark
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-smartpark}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "${BIND_ADDRESS:-127.0.0.1}:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -25,13 +27,17 @@ services:
       db:
         condition: service_healthy
     environment:
-      ConnectionStrings__Default: Host=db;Port=5432;Database=smartpark;Username=smartpark;Password=smartpark
+      ConnectionStrings__Default: Host=db;Port=5432;Database=smartpark;Username=smartpark;Password=${DB_PASSWORD:-smartpark}
+      Jwt__Key: ${JWT_KEY:-dev-only-signing-key-change-me-0123456789abcdef}
+      Edge__ApiKey: ${EDGE_KEY:-dev-edge-key}
+      Seed__Password: ${SEED_PASSWORD:-Test#12345}
+      Payment__FailureRate: ${PAYMENT_FAILURE_RATE:-0.1}
       Storage__ReceiptsPath: /data/receipts
       Storage__LogsPath: /data/logs
-      Client__BaseUrl: http://localhost:8080
+      Client__BaseUrl: ${PUBLIC_URL:-http://localhost:8080}
       TZ: Europe/Kyiv
     ports:
-      - "127.0.0.1:5000:5000"
+      - "${BIND_ADDRESS:-127.0.0.1}:5000:5000"
     volumes:
       - appdata:/data
 
@@ -41,7 +47,7 @@ services:
     depends_on:
       - api
     ports:
-      - "127.0.0.1:8080:80"
+      - "${BIND_ADDRESS:-127.0.0.1}:8080:80"
 
   simulator:
     build:
@@ -51,7 +57,7 @@ services:
       - api
     environment:
       SERVER_URL: http://api:5000
-      EDGE_KEY: dev-edge-key
+      EDGE_KEY: ${EDGE_KEY:-dev-edge-key}
       PARKING_ID: 11111111-1111-1111-1111-111111111111
       SIM_DATA: /sim-data
     command: ["--auto"]
@@ -66,7 +72,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      PGPASSWORD: smartpark
+      PGPASSWORD: ${DB_PASSWORD:-smartpark}
     entrypoint: >
       sh -c "while true; do
         pg_dump -h db -U smartpark smartpark > /backups/smartpark-$$(date +%F).sql;
